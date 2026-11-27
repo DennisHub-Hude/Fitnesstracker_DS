@@ -1,11 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { Screen } from '@/components/Screen';
 import { Button, Card, Chips, Field, IconButton, Muted, Title, type IconName } from '@/components/ui';
-import { ACTIVITIES, activityById, EXERCISES } from '@/data/activities';
+import { ACTIVITIES, activityById, EXERCISE_GROUPS } from '@/data/activities';
 import { workoutKcal } from '@/lib/calc';
 import { confirm, fmt, newId, parseNum } from '@/lib/confirm';
 import { todayKey } from '@/lib/date';
@@ -43,7 +43,14 @@ export default function WorkoutScreen() {
   const calculated = workoutKcal(activity.met, data.profile.weightKg, mins, intensity);
   const kcal = kcalOverride.trim() ? Math.round(parseNum(kcalOverride)) : calculated;
 
-  const exerciseSuggestions = useMemo(() => EXERCISES.filter((e) => !exercises.some((x) => x.exercise === e)), [exercises]);
+  const exerciseSuggestions = useMemo(
+    () =>
+      EXERCISE_GROUPS.map((g) => ({
+        group: g.group,
+        exercises: g.exercises.filter((e) => !exercises.some((x) => x.exercise === e)),
+      })).filter((g) => g.exercises.length > 0),
+    [exercises],
+  );
 
   const updateExercise = (id: string, patch: Partial<StrengthSet>) =>
     setExercises((xs) => xs.map((x) => (x.id === id ? { ...x, ...patch } : x)));
@@ -171,17 +178,23 @@ export default function WorkoutScreen() {
             </View>
           ))}
           <Muted>Übung hinzufügen:</Muted>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {exerciseSuggestions.map((e) => (
-              <Pressable
-                key={e}
-                onPress={() => addExercise(e)}
-                style={{ backgroundColor: t.primarySoft, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16 }}
-              >
-                <Text style={{ color: t.primary, fontWeight: '600' }}>+ {e}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          {exerciseSuggestions.map((g) => (
+            <View key={g.group} style={{ gap: 6 }}>
+              <Text style={{ color: t.text, fontWeight: '700', fontSize: 13 }}>{g.group}</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {g.exercises.map((e) => (
+                  <Pressable
+                    key={e}
+                    onPress={() => addExercise(e)}
+                    accessibilityRole="button"
+                    style={{ backgroundColor: t.primarySoft, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16 }}
+                  >
+                    <Text style={{ color: t.primary, fontWeight: '600', fontSize: 13 }}>+ {e}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ))}
         </Card>
       )}
 
